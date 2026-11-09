@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Secret Room Chat</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PeerJS for Direct Browser-to-Browser Connection -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=gg+sans:wght@400;500;600;700&display=swap');
+        
+        :root {
+            --discord-blurple: #5865F2;
+            --discord-dark: #313338;
+            --discord-darker: #2B2D31;
+            --discord-darkest: #1E1F22;
+            --discord-text: #DBDEE1;
+            --discord-muted: #949BA4;
+            --discord-input: #383A40;
+        }
+
+        body {
+            font-family: 'gg sans', 'Noto Sans', sans-serif;
+            background-color: var(--discord-darkest);
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .discord-button-primary {
+            background-color: var(--discord-blurple);
+            transition: background-color 0.2s;
+        }
+        .discord-button-primary:hover {
+            background-color: #4752C4;
+        }
+    </style>
+</head>
+<body class="text-[#DBDEE1] h-[100dvh] w-screen overflow-hidden flex items-center justify-center relative">
+
+    <!-- GLOBAL ERROR TOAST -->
+    <div id="error-box" class="hidden absolute top-6 left-1/2 transform -translate-x-1/2 z-[200] bg-[#FA777C] text-white px-6 py-3 rounded shadow-xl font-medium text-sm transition-all fade-in flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-5 h-5"></i>
+        <span id="error-message-text"></span>
+    </div>
+
+    <!-- WARN OVERLAY -->
+    <div id="warn-overlay" class="hidden absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-[#FA777C]/95 backdrop-blur-md fade-in pointer-events-auto">
+        <i data-lucide="alert-triangle" class="w-24 h-24 text-white mb-6 animate-pulse"></i>
+        <h1 class="text-4xl md:text-6xl font-black text-white uppercase tracking-widest mb-4 text-center">WARNING</h1>
+        <p class="text-xl text-white font-medium text-center px-6">You have been warned by an admin.<br>Please follow the room rules.</p>
+        <p id="warn-timer" class="mt-8 text-white/90 font-mono text-4xl font-bold">10s</p>
+    </div>
+  
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#1E1F22] p-4 fade-in overflow-y-auto">
+        <div class="bg-[#313338] p-8 rounded-lg shadow-2xl w-full max-w-[480px] text-center my-auto border border-[#1E1F22]">
+            <h1 class="text-2xl font-bold text-white mb-2">Welcome back!</h1>
+            <p class="text-[#B5BAC1] mb-8">We're so excited to see you again!</p>
+            
+            <!-- AVATAR CUSTOMIZER -->
+            <div class="flex flex-col items-center mb-6 bg-[#2B2D31] p-5 rounded-md border border-[#1E1F22]">
+                <div class="relative mb-4 group">
+                    <img id="avatar-preview" src="" alt="Avatar" class="w-20 h-20 rounded-full bg-[#1E1F22] object-cover border-4 border-[#313338]" />
+                    <label for="avatar-upload" class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                        <i data-lucide="camera" class="text-white w-6 h-6"></i>
+                    </label>
+                    <input type="file" id="avatar-upload" accept="image/*" class="hidden" onchange="handleAvatarUpload(event)">
+                    <button onclick="generateNewSeed()" class="absolute -bottom-1 -right-1 bg-[#5865F2] text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform" title="Randomize">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div class="w-full space-y-2">
+                    <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider text-left">Avatar Style</label>
+                    <select id="avatar-style-select" onchange="updateAvatarUrl()" class="w-full bg-[#1E1F22] text-white text-sm py-2 px-3 rounded border-none focus:ring-1 focus:ring-[#5865F2] cursor-pointer">
+                        <option value="avataaars">Humans</option>
+                        <option value="bottts">Robots</option>
+                        <option value="micah">Minimalist</option>
+                        <option value="fun-emoji">Emojis</option>
+                        <option value="lorelei">Cute Art</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="text-left mb-6">
+                    <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2">Display Name</label>
+                    <input type="text" id="user-name" required placeholder="What should we call you?" 
+                        class="w-full bg-[#1E1F22] text-white px-4 py-3 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] transition-all">
+                </div>
+
+                <!-- PUBLIC LOBBIES -->
+                <div class="mb-4">
+                    <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2 text-left">Public Lobbies</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button id="btn-lobby-1" onclick="joinPublicRoom(1)" class="w-full bg-[#23A559] hover:bg-[#1E8A49] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
+                            <div class="flex items-center gap-1"><i data-lucide="globe" class="w-4 h-4"></i> Lobby 1</div>
+                            <span id="lobby-count-1" class="text-[10px] text-white/70 mt-0.5 font-normal">Checking...</span>
+                        </button>
+                        <button id="btn-lobby-2" onclick="joinPublicRoom(2)" class="w-full bg-[#23A559] hover:bg-[#1E8A49] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
+                            <div class="flex items-center gap-1"><i data-lucide="globe" class="w-4 h-4"></i> Lobby 2</div>
+                            <span id="lobby-count-2" class="text-[10px] text-white/70 mt-0.5 font-normal">Checking...</span>
+                        </button>
+                        <button id="btn-lobby-3" onclick="joinPublicRoom(3)" class="w-full bg-[#23A559] hover:bg-[#1E8A49] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
+                            <div class="flex items-center gap-1"><i data-lucide="globe" class="w-4 h-4"></i> Lobby 3</div>
+                            <span id="lobby-count-3" class="text-[10px] text-white/70 mt-0.5 font-normal">Checking...</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-[#4E5058]"></div>
+                    <span class="flex-shrink-0 mx-4 text-[#949BA4] text-[10px] font-bold uppercase tracking-wider">Or Private Room</span>
+                    <div class="flex-grow border-t border-[#4E5058]"></div>
+                </div>
+
+                <!-- PRIVATE ROOM BUTTONS -->
+                <div class="mb-4 text-left">
+                    <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2">Custom Code (Optional)</label>
+                    <input type="text" id="custom-room-code" placeholder="Leave blank for random" 
+                        class="w-full bg-[#1E1F22] text-white px-4 py-2.5 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] uppercase font-mono tracking-widest text-center">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-2">
+                    <button onclick="createRoom()" id="create-btn" class="w-full discord-button-primary text-white font-medium py-2.5 rounded transition-all text-sm flex items-center justify-center gap-2">
+                        Create Private
+                    </button>
+                    <button onclick="showJoinInput()" id="show-join-btn" class="w-full bg-[#4E5058] hover:bg-[#6D6F78] text-white font-medium py-2.5 rounded transition-all text-sm">
+                        Join Private
+                    </button>
+                </div>
+
+                <div id="join-container" class="hidden space-y-3 pt-2 slide-up">
+                    <div class="text-left">
+                        <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2">Invite Code</label>
+                        <input type="text" id="room-code" placeholder="e.g. h8k2m1" 
+                            class="w-full bg-[#1E1F22] text-white px-4 py-2.5 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] uppercase font-mono tracking-widest text-center">
+                    </div>
+                    <button onclick="joinPrivateRoom()" id="join-btn" class="w-full discord-button-primary text-white font-medium py-2.5 rounded transition-all flex items-center justify-center gap-2">
+                        Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CHAT SCREEN -->
+    <div id="chat-screen" class="hidden h-full w-full flex-row overflow-hidden relative fade-in">
+        
+        <!-- Sidebar: Channel List & Participants -->
+        <div class="w-60 flex-shrink-0 bg-[#2B2D31] flex flex-col hidden md:flex border-r border-[#1E1F22]">
+            <div class="h-12 px-4 flex items-center justify-between border-b border-[#1E1F22] shadow-sm cursor-pointer hover:bg-[#35373C]">
+                <h2 class="font-bold text-white text-sm truncate">Secret Room Chat</h2>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-[#B5BAC1]"></i>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3 no-scrollbar space-y-6">
+                <!-- Room Info -->
+                <div>
+                    <h3 id="access-control-label" class="text-[11px] font-bold text-[#949BA4] uppercase tracking-wider mb-2 px-2">Access Control</h3>
+                    <div class="bg-[#1E1F22] p-3 rounded-md">
+                        <p class="text-[9px] text-[#949BA4] font-bold uppercase mb-1">Invite Code</p>
+                        <div class="flex items-center justify-between">
+                            <span id="sidebar-room-code" class="font-mono font-bold text-white tracking-widest text-sm">---</span>
+                            <button id="copy-room-btn" onclick="copyRoomCode()" class="text-[#B5BAC1] hover:text-white"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Users -->
+                <div>
+                    <h3 class="text-[11px] font-bold text-[#949BA4] uppercase tracking-wider mb-2 px-2">Online — <span id="peer-count">1</span></h3>
+                    <div id="participants-list" class="space-y-0.5"></div>
+                </div>
+            </div>
+            
+            <!-- User Footer -->
+            <div class="p-2 bg-[#232428] flex items-center gap-2">
+                <div class="relative">
+                    <img id="my-avatar" src="" class="w-8 h-8 rounded-full bg-[#313338] object-cover" />
+                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-[#23A559] border-[3px] border-[#232428] rounded-full"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p id="my-name-display" class="text-xs font-bold text-white truncate">You</p>
+                    <p class="text-[10px] text-[#B5BAC1] truncate">#Online</p>
+                </div>
+                <button onclick="leaveRoom()" class="p-2 text-[#B5BAC1] hover:bg-[#3F4147] hover:text-[#FA777C] rounded transition-colors" title="Disconnect">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col bg-[#313338] h-full relative overflow-hidden">
+            <!-- Header -->
+            <div class="h-12 flex-shrink-0 px-4 flex items-center justify-between border-b border-[#2B2D31] shadow-sm z-10">
+                <div class="flex items-center gap-2 text-[#949BA4]">
+                    <i data-lucide="hash" class="w-6 h-6"></i>
+                    <span class="font-bold text-white text-[15px]">general-chat</span>
+                    <button id="admin-clear-btn" onclick="window.clearChat()" class="hidden ml-2 px-2 py-0.5 bg-[#FA777C] hover:bg-[#D85C61] text-white text-[10px] font-bold uppercase rounded transition-colors">Clear Chat</button>
+                    <button id="admin-oneway-btn" onclick="window.adminOneWayVC()" class="hidden ml-2 px-2 py-0.5 bg-[#5865F2] hover:bg-[#4752C4] text-white text-[10px] font-bold uppercase rounded transition-colors" title="Mute everyone else so only you can speak">One-Way VC</button>
+                  <button id="admin-ban-host-btn" onclick="window.banHost()" class="hidden ml-2 px-2 py-0.5 bg-[#DA373C] hover:bg-[#A1282D] text-white text-[10px] font-bold uppercase rounded transition-colors" title="Force Host Migration & Ban">Ban Host</button>
+                </div>
+                <div class="flex items-center gap-4 text-[#B5BAC1]">
+                    <!-- New VC Controls -->
+                  
+                    <div id="vc-controls" class="hidden flex items-center gap-2 mr-2 bg-[#1E1F22] rounded-md p-1">
+                        <button id="vc-mute-btn" onclick="window.toggleMute()" class="p-1.5 hover:bg-[#3F4147] hover:text-white rounded transition-colors" title="Mute/Unmute">
+                            <i data-lucide="mic" class="w-4 h-4" id="vc-mic-icon"></i>
+                        </button>
+                        <button id="vc-leave-btn" onclick="window.leaveVoiceChat()" class="p-1.5 hover:bg-[#FA777C] hover:text-white text-[#FA777C] rounded transition-colors" title="Disconnect Voice">
+                            <i data-lucide="phone-off" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                  
+                    <button id="vc-join-btn" onclick="window.joinVoiceChat()" class="flex items-center gap-1 px-2 py-1 bg-[#23A559] hover:bg-[#1E8A49] text-white text-[11px] font-bold uppercase rounded transition-colors mr-2">
+                        <i data-lucide="headphones" class="w-4 h-4"></i> Join Voice
+                    </button>
+                  <button id="manage-bans-btn" onclick="window.openUnbanModal()" class="hidden flex items-center gap-1 px-2 py-1 bg-[#2B2D31] hover:bg-[#FA777C] text-white text-[11px] font-bold uppercase rounded transition-colors mr-2">
+    <i data-lucide="shield" class="w-4 h-4"></i> Bans
+</button>
+                    <i data-lucide="key" onclick="window.openAdminModal()" class="w-5 h-5 cursor-pointer hover:text-[#FA777C] transition-colors" title="Admin Login"></i>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-1 no-scrollbar relative"></div>
+
+            <!-- Input Area -->
+            <div class="px-4 pb-6 pt-2 flex-shrink-0 relative">
+                
+                <!-- Emoji Picker Popup -->
+                <div id="emoji-picker" class="hidden absolute bottom-20 right-14 bg-[#2B2D31] border border-[#1E1F22] rounded-lg shadow-xl p-2 w-72 h-48 overflow-y-auto grid-cols-8 gap-1 z-50 slide-up">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- GIF Picker Popup -->
+                <div id="gif-picker" class="hidden absolute bottom-20 right-4 bg-[#2B2D31] border border-[#1E1F22] rounded-lg shadow-xl p-3 w-80 h-72 flex-col z-50 slide-up">
+                    <input type="text" id="gif-search-input" placeholder="Search Tenor/Giphy..." class="w-full bg-[#1E1F22] text-white px-3 py-2 rounded text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-[#5865F2]">
+                    <div id="gif-results" class="flex-1 overflow-y-auto grid grid-cols-2 gap-2 no-scrollbar">
+                        <div class="col-span-2 text-center text-sm text-[#949BA4] py-4">Search to find GIFs</div>
+                    </div>
+                </div>
+
+                <form id="message-form" class="bg-[#383A40] rounded-lg flex items-center px-4 py-2.5 gap-4 relative">
+                    <!-- File Upload Button -->
+                    <label for="chat-file-upload" class="w-6 h-6 bg-[#B5BAC1] rounded-full flex items-center justify-center text-[#383A40] cursor-pointer hover:bg-white transition-colors flex-shrink-0" title="Upload a file (Max 2MB)">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                    </label>
+                    <input type="file" id="chat-file-upload" class="hidden" onchange="window.handleChatFileUpload(event)" />
+
+                    <input type="text" id="message-input" autocomplete="off" placeholder="Message #general-chat | Try /msg, /shout, /color" 
+                        class="flex-1 bg-transparent text-[#DBDEE1] focus:outline-none placeholder-[#6D6F78]" />
+                    
+                    <div class="flex items-center gap-3 text-[#B5BAC1]">
+                        <button type="button" id="gif-btn" class="hover:text-white transition-colors outline-none font-bold text-sm bg-[#4E5058] px-2 py-0.5 rounded" title="Send a GIF">
+                            GIF
+                        </button>
+                        <button type="button" id="emoji-btn" class="hover:text-white transition-colors outline-none">
+                            <i data-lucide="smile" class="w-6 h-6 pointer-events-none"></i>
+                        </button>
+                    </div>
+                    <!-- Hidden submit button ensures "Enter" key reliably triggers form submission on all browsers -->
+                    <button type="submit" class="hidden"></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN MODAL -->
+    <div id="admin-modal" class="hidden absolute inset-0 z-[100] flex items-center justify-center bg-black/80 fade-in">
+        <div class="bg-[#313338] p-6 rounded-lg shadow-2xl w-80 text-center border border-[#1E1F22]">
+            <h2 class="text-xl font-bold text-white mb-2">Admin Access</h2>
+            <p class="text-xs text-[#949BA4] mb-4">Enter the secret password to unlock admin powers.</p>
+            <input type="password" id="admin-password" placeholder="Password" class="w-full bg-[#1E1F22] text-white px-4 py-2 rounded focus:outline-none focus:ring-1 focus:ring-[#FA777C] mb-4 text-center">
+            <div id="admin-error" class="hidden text-[#FA777C] text-xs mb-4">Incorrect password</div>
+            <div class="flex gap-3 justify-center">
+                <button onclick="window.closeAdminModal()" class="px-4 py-2 text-sm text-[#B5BAC1] hover:text-white transition-colors">Cancel</button>
+                <button onclick="window.checkAdminPassword()" class="px-4 py-2 text-sm bg-[#FA777C] text-white rounded hover:bg-[#D85C61] transition-colors font-medium">Unlock</button>
+            </div>
+        </div>
+    </div>
+  <div id="unban-modal" class="hidden absolute inset-0 z-[100] flex items-center justify-center bg-black/80 fade-in">
+        <div class="bg-[#313338] p-6 rounded-lg shadow-2xl w-96 max-h-[80vh] flex flex-col border border-[#1E1F22]">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white">Banned Users</h2>
+                <button onclick="window.closeUnbanModal()" class="text-[#B5BAC1] hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="banned-users-list" class="flex-1 overflow-y-auto space-y-2 no-scrollbar">
+                </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        lucide.createIcons();
+
+        // --- Network Config for Cross-Network Play (NAT Traversal) ---
+        const peerJSConfig = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun.cloudflare.com:3478' }
+                ]
+            }
+        };
+
+        // --- System State ---
+        const GLOBAL_PUBLIC_ROOM_BASE = 'SECRET-LOBBY-V2-';
+        let peer = null;
+        let pingPeer = null; 
+        let lobbyPingInterval = null; // Holds the interval for our silent pinger
+        
+        let isHost = false;
+        let currentRoomCode = null; 
+        let actualRoomId = null;    
+        
+        let userName = '';
+        let myAvatar = '';
+        let isMigrating = false;
+        let isCustomAvatar = false;
+        let isKicked = false;
+        let isAdmin = false;
+        let adminForceMuted = false;
+        
+        let myUserId = localStorage.getItem('secret_chat_uid');
+        if (!myUserId) {
+            myUserId = 'user_' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('secret_chat_uid', myUserId);
+        }
+
+        let currentAvatarSeed = Math.random().toString(36).substring(2, 10);
+        let currentAvatarStyle = 'avataaars';
+        
+        let hostConnections = []; 
+        let myConnectionToHost = null; 
+        let heartbeatInterval = null;
+        
+        let messages = [];
+        let participants = []; 
+        let bannedUsers = []; 
+        let renderedMessageIds = new Set();
+
+        let localStream = null;
+        let activeCalls = {};
+        let inVoiceChat = false;
+        let isMicMuted = false;
+
+        let userTextColor = ''; // Stores the custom user text color
+
+        // --- LOBBY PINGING SYSTEM (SILENT COUNT FETCH) ---
+        function startLobbyPings() {
+            if (lobbyPingInterval) clearInterval(lobbyPingInterval);
+            
+            if (!pingPeer || pingPeer.destroyed) {
+                pingPeer = new Peer(peerJSConfig);
+                pingPeer.on('error', () => {}); // Silently catch errors for offline lobbies
+            }
+
+            const checkLobbies = () => {
+                // Double check to ensure we don't ping while actively in chat
+                if (document.getElementById('login-screen').classList.contains('hidden')) return;
+
+                [1, 2, 3].forEach(num => {
+                    const roomId = `${GLOBAL_PUBLIC_ROOM_BASE}${num}`;
+                    // Special metadata tells the host "Hey, just give me the count and disconnect me"
+                    const conn = pingPeer.connect(roomId, { metadata: { type: 'ping_count' }, reliable: false });
+                    
+                    const timeout = setTimeout(() => {
+                        const el = document.getElementById(`lobby-count-${num}`);
+                        if (el && (el.textContent === 'Checking...' || el.textContent.includes('online'))) {
+                            // If it times out, assume 0 online
+                            el.textContent = '0 online';
+                        }
+                        if(conn) conn.close();
+                    }, 4000);
+
+                    conn.on('data', (data) => {
+                        if (data.type === 'lobby_count') {
+                            const el = document.getElementById(`lobby-count-${num}`);
+                            if (el) el.textContent = `${data.count} online`;
+                            clearTimeout(timeout);
+                            setTimeout(() => conn.close(), 100);
+                        }
+                    });
+
+                    conn.on('error', () => {
+                        const el = document.getElementById(`lobby-count-${num}`);
+                        if (el) el.textContent = '0 online';
+                        clearTimeout(timeout);
+                    });
+                });
+            };
+
+            checkLobbies(); // Run initial check instantly
+            lobbyPingInterval = setInterval(checkLobbies, 5000); // Check every 5 seconds for a more "constant" feel
+        }
+        
+        function stopLobbyPings() {
+            if (lobbyPingInterval) {
+                clearInterval(lobbyPingInterval);
+                lobbyPingInterval = null;
+            }
+        }
+        
+        // Start pings when the page initially loads
+        startLobbyPings();
+
+
+        // --- EMOJI & GIF PICKER SETUP ---
+        const commonEmojis = ["😀","😂","🤣","😊","😍","🥰","😘","😭","😅","😎","🤓","😡","🤬","😈","💀","👽","👾","🤖","👻","💩","🤡","😺","🙌","👏","👍","👎","👊","🤞","✌️","🤟","🤘","👌","🤌","🤏","👈","👉","👆","👇","☝️","✋","🤚","🖐","🖖","👋","🤙","💪","🧠","👀","👁","👅","👄","💋","💔","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💯","💢","💥","💫","💦","💨","🕳","💣","💬","👁️‍🗨️","🗨️","🗯️","💭","💤"];
+        const emojiPicker = document.getElementById('emoji-picker');
+        const gifPicker = document.getElementById('gif-picker');
+        
+        commonEmojis.forEach(e => {
+            const btn = document.createElement('button');
+            btn.className = "hover:bg-[#3F4147] rounded p-1 text-xl transition-colors flex items-center justify-center";
+            btn.textContent = e;
+            btn.onclick = (event) => {
+                event.preventDefault();
+                const input = document.getElementById('message-input');
+                input.value += e;
+                input.focus();
+            };
+            emojiPicker.appendChild(btn);
+        });
+
+        document.getElementById('emoji-btn').addEventListener('click', (e) => {
+            emojiPicker.classList.toggle('hidden');
+            emojiPicker.classList.toggle('grid');
+            gifPicker.classList.add('hidden');
+            gifPicker.classList.remove('flex');
+            e.stopPropagation();
+        });
+
+        document.getElementById('gif-btn').addEventListener('click', (e) => {
+            gifPicker.classList.toggle('hidden');
+            gifPicker.classList.toggle('flex');
+            emojiPicker.classList.add('hidden');
+            emojiPicker.classList.remove('grid');
+            document.getElementById('gif-search-input').focus();
+            e.stopPropagation();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!emojiPicker.contains(e.target) && e.target.id !== 'emoji-btn') {
+                emojiPicker.classList.add('hidden');
+                emojiPicker.classList.remove('grid');
+            }
+            if (!gifPicker.contains(e.target) && e.target.id !== 'gif-btn') {
+                gifPicker.classList.add('hidden');
+                gifPicker.classList.remove('flex');
+            }
+        });
+
+        // Giphy API Integration
+        let gifSearchTimeout = null;
+        document.getElementById('gif-search-input').addEventListener('input', (e) => {
+            clearTimeout(gifSearchTimeout);
+            const query = e.target.value.trim();
+            if (!query) {
+                document.getElementById('gif-results').innerHTML = '<div class="col-span-2 text-center text-sm text-[#949BA4] py-4">Search to find GIFs</div>';
+                return;
+            }
+            gifSearchTimeout = setTimeout(() => {
+                window.searchGifs(query);
+            }, 500);
+        });
+
+        window.searchGifs = async (query) => {
+            const container = document.getElementById('gif-results');
+            container.innerHTML = '<div class="col-span-2 text-center text-sm text-[#949BA4] py-4">Searching...</div>';
+            try {
+                // Switched to Tenor API which is more reliable for public demos
+                const res = await fetch(`https://g.tenor.com/v1/search?q=${encodeURIComponent(query)}&key=LIVDSRZULELA&limit=12`);
+                if (!res.ok) throw new Error('API Error');
+                const data = await res.json();
+                container.innerHTML = '';
+                
+                if (!data.results || data.results.length === 0) {
+                    container.innerHTML = '<div class="col-span-2 text-center text-sm text-[#949BA4] py-4">No GIFs found</div>';
+                    return;
+                }
+                
+                data.results.forEach(gif => {
+                    const img = document.createElement('img');
+                    img.src = gif.media[0].tinygif.url;
+                    img.className = 'w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-[#1E1F22]';
+                    img.onclick = () => window.sendGif(gif.media[0].gif.url);
+                    container.appendChild(img);
+                });
+            } catch (e) {
+                console.error("GIF Error:", e);
+                container.innerHTML = '<div class="col-span-2 text-center text-sm text-[#FA777C] py-4">Error loading GIFs</div>';
+            }
+        };
+
+        window.sendGif = (url) => {
+            const me = participants.find(p => p.userId === myUserId);
+            if (me && me.isChatMuted) {
+                showError("An admin has disabled your ability to send messages.");
+                return;
+            }
+
+            const msg = {
+                id: Date.now() + Math.random(),
+                text: '',
+                isGif: true,
+                gifUrl: url,
+                senderId: myUserId,
+                senderName: userName,
+                avatar: myAvatar,
+                timestamp: Date.now(),
+                isPrivate: false
+            };
+            
+            gifPicker.classList.add('hidden');
+            gifPicker.classList.remove('flex');
+            document.getElementById('gif-search-input').value = '';
+            
+            messages.push(msg);
+            renderMessages();
+            
+            if (isHost) broadcastAsHost({ type: 'chat', payload: msg });
+            else if (myConnectionToHost) myConnectionToHost.send({ type: 'chat', payload: msg });
+        };
+
+        // --- AVATAR & USER LOGIC ---
+        window.handleAvatarUpload = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 102400) {
+                showError("Avatar too large! Please use a file under 100KB.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                myAvatar = e.target.result;
+                isCustomAvatar = true;
+                document.getElementById('avatar-preview').src = myAvatar;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.generateNewSeed = () => {
+            isCustomAvatar = false;
+            currentAvatarSeed = Math.random().toString(36).substring(2, 10);
+            updateAvatarUrl();
+        };
+
+        window.updateAvatarUrl = () => {
+            if (isCustomAvatar) return;
+            currentAvatarStyle = document.getElementById('avatar-style-select').value;
+            myAvatar = `https://api.dicebear.com/7.x/${currentAvatarStyle}/svg?seed=${currentAvatarSeed}&backgroundColor=313338&radius=50`;
+            document.getElementById('avatar-preview').src = myAvatar;
+        };
+        
+        updateAvatarUrl();
+
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            document.getElementById('error-message-text').textContent = msg;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 4000);
+        }
+
+        function escapeHtml(unsafe) {
+            return (unsafe || '').toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        window.showJoinInput = () => {
+            document.getElementById('join-container').classList.toggle('hidden');
+        };
+
+        function startHeartbeat() {
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            heartbeatInterval = setInterval(() => {
+                if (isHost) {
+                    broadcastAsHost({ type: 'ping' });
+                    const now = Date.now();
+                    hostConnections.forEach(c => {
+                        if (now - c.lastPing > 15000) {
+                            c.conn.close();
+                            removeUserFromRoom(c.userId);
+                        }
+                    });
+                }
+                else if (myConnectionToHost && myConnectionToHost.open) {
+                    myConnectionToHost.send({ type: 'ping' });
+                }
+            }, 5000); 
+        }
+
+        function validateUser() {
+            const nameInput = document.getElementById('user-name').value.trim();
+            if (!nameInput) { showError("Enter a display name first!"); return false; }
+            userName = nameInput;
+            return true;
+        }
+
+        // --- CONNECTION LOGIC ---
+
+        window.joinPublicRoom = (lobbyNum) => {
+            if (!validateUser()) return;
+            
+            stopLobbyPings(); // Pause background pings while connecting
+            
+            const targetRoomCode = `PUBLIC ${lobbyNum}`;
+            const targetRoomId = `${GLOBAL_PUBLIC_ROOM_BASE}${lobbyNum}`;
+            
+            const btn = document.getElementById(`btn-lobby-${lobbyNum}`);
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> Joining...`;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                btn.disabled = true;
+                lucide.createIcons();
+            }
+
+            const restoreBtn = () => {
+                if (btn) {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    btn.disabled = false;
+                    lucide.createIcons();
+                }
+                if (!document.getElementById('login-screen').classList.contains('hidden')) {
+                    startLobbyPings(); // Restart pings if we failed
+                }
+            };
+
+            isHost = false;
+            currentRoomCode = targetRoomCode;
+            actualRoomId = targetRoomId;
+            
+            if (peer) peer.destroy();
+            peer = new Peer(peerJSConfig);
+            
+            let connectionTimeout;
+            
+            peer.on('open', (id) => {
+                const conn = peer.connect(targetRoomId, { reliable: true });
+                
+                // If host is a "ghost" (disconnected but server didn't drop them yet), take over
+                connectionTimeout = setTimeout(() => {
+                    conn.close();
+                    becomeHost(targetRoomId, targetRoomCode, restoreBtn);
+                }, 4000);
+
+                conn.on('open', () => {
+                    clearTimeout(connectionTimeout);
+                    restoreBtn();
+                    myConnectionToHost = conn;
+                    setupGuestConnection(myConnectionToHost);
+                });
+                
+                conn.on('error', (err) => {
+                    clearTimeout(connectionTimeout);
+                    restoreBtn();
+                    showError("Connection failed to established lobby.");
+                });
+                setupPeerCallListener();
+            });
+            
+            peer.on('error', (err) => {
+                clearTimeout(connectionTimeout);
+                if (err.type === 'peer-unavailable') {
+                    // Nobody hosting, become the host
+                    setTimeout(() => becomeHost(targetRoomId, targetRoomCode, restoreBtn), 100);
+                } else {
+                    restoreBtn();
+                    showError("Network Error: " + err.type);
+                }
+            });
+        };
+
+        window.createRoom = () => {
+            if (!validateUser()) return;
+            stopLobbyPings();
+
+            const btn = document.getElementById('create-btn');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> Creating...`;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btn.disabled = true;
+            lucide.createIcons();
+
+            const restoreBtn = () => {
+                btn.innerHTML = originalHtml;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btn.disabled = false;
+                lucide.createIcons();
+                if (!document.getElementById('login-screen').classList.contains('hidden')) {
+                    startLobbyPings();
+                }
+            };
+
+            const customInput = document.getElementById('custom-room-code').value.trim().toUpperCase();
+            const code = customInput || Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            becomeHost(code, code, restoreBtn);
+        };
+
+        window.joinPrivateRoom = () => {
+            if (!validateUser()) return;
+            const roomInput = document.getElementById('room-code').value.trim().toUpperCase();
+            if (!roomInput) return showError("Enter the Room Code!");
+            
+            stopLobbyPings();
+
+            const btn = document.getElementById('join-btn');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i> Connecting...`;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btn.disabled = true;
+            lucide.createIcons();
+
+            const restoreBtn = () => {
+                btn.innerHTML = originalHtml;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btn.disabled = false;
+                lucide.createIcons();
+                if (!document.getElementById('login-screen').classList.contains('hidden')) {
+                    startLobbyPings();
+                }
+            };
+
+            joinRoomCode(roomInput, restoreBtn);
+        };
+
+        function becomeHost(roomId, displayCode = null, onComplete = () => {}) {
+            isHost = true;
+            if (peer) peer.destroy();
+            
+            setTimeout(() => {
+                peer = new Peer(roomId, peerJSConfig);
+
+                peer.on('open', (id) => {
+                    actualRoomId = id;
+                    currentRoomCode = displayCode || id;
+                    
+                    if (!isMigrating) {
+                        participants = [{ userId: myUserId, name: userName, avatar: myAvatar, isHost: true, isMe: true, inVc: false, isMuted: false, isChatMuted: false, peerId: id }];
+                        let welcomeMsg = (currentRoomCode && currentRoomCode.startsWith("PUBLIC"))
+                            ? `Welcome to ${currentRoomCode}. You are the host. Keep it clean!` 
+                            : `Welcome to your private room (${id}). Keep it clean!`;
+                        
+                        messages = [
+                            { id: Date.now(), timestamp: Date.now(), system: true, text: welcomeMsg },
+                            { id: Date.now()+1, timestamp: Date.now(), system: true, text: `Tip: Send a private whisper using: /msg "Username" your message` },
+                            { id: Date.now()+2, timestamp: Date.now(), system: true, text: `Commands: /shout your message, /color red, /color reset` }
+                        ];
+                    } else {
+                        participants.forEach(p => p.isHost = (p.userId === myUserId));
+                        isMigrating = false;
+                    }
+                    
+                    switchToChatScreen();
+                    onComplete(); // Restore button UI behind the scenes
+                    startHeartbeat();
+                    setupHostListeners();
+                    setupPeerCallListener();
+                });
+
+                peer.on('error', (err) => {
+                    onComplete();
+                    if (err.type === 'unavailable-id') {
+                        if (displayCode && displayCode.startsWith("PUBLIC")) {
+                            showError("Lobby is currently busy or unresponsive. Please try another.");
+                        } else {
+                            showError("Error: Room ID already taken.");
+                        }
+                    } else {
+                        showError("Network error. Try again.");
+                    }
+                });
+            }, 100);
+        }
+
+        function joinRoomCode(roomId, restoreBtn = () => {}) {
+            isHost = false;
+            actualRoomId = roomId;
+            currentRoomCode = roomId;
+            
+            if (peer) peer.destroy();
+            peer = new Peer(peerJSConfig); 
+            let connectionTimeout;
+
+            peer.on('open', (id) => {
+                myConnectionToHost = peer.connect(roomId, { reliable: true });
+                
+                connectionTimeout = setTimeout(() => {
+                    restoreBtn();
+                    myConnectionToHost.close();
+                    showError("Room is unresponsive or doesn't exist.");
+                }, 5000);
+
+                myConnectionToHost.on('open', () => {
+                    clearTimeout(connectionTimeout);
+                    restoreBtn();
+                    setupGuestConnection(myConnectionToHost);
+                });
+                
+                myConnectionToHost.on('error', (err) => {
+                    clearTimeout(connectionTimeout);
+                    restoreBtn();
+                    showError("Connection closed unexpectedly.");
+                });
+                setupPeerCallListener();
+            });
+            
+            peer.on('error', (err) => {
+                clearTimeout(connectionTimeout);
+                restoreBtn();
+                if (err.type === 'peer-unavailable') showError("Room not found.");
+                else showError("Connection error.");
+            });
+        }
+
+        function handleHostDisconnect() {
+            if (isKicked || isMigrating) return;
+            isMigrating = true;
+            participants = participants.filter(p => !p.isHost);
+            
+            if (participants.length === 0) { 
+                leaveRoom(); 
+                return; 
+            }
+            
+            participants.sort((a, b) => a.userId.localeCompare(b.userId));
+            const newHost = participants[0];
+            
+            if (newHost.userId === myUserId) {
+                setTimeout(() => becomeHost(actualRoomId, currentRoomCode), 2000);
+            } else {
+                setTimeout(() => {
+                    if (currentRoomCode && currentRoomCode.startsWith("PUBLIC")) {
+                        const lobbyNum = currentRoomCode.split(" ")[1];
+                        joinPublicRoom(lobbyNum);
+                    }
+                    else joinRoomCode(actualRoomId);
+                }, 5000);
+            }
+        }
+
+        function setupHostListeners() {
+            peer.on('connection', (conn) => {
+                // Feature 1: Check if this is just a silent ping for lobby counts
+                if (conn.metadata && conn.metadata.type === 'ping_count') {
+                    conn.on('open', () => {
+                        conn.send({ type: 'lobby_count', count: participants.length });
+                        setTimeout(() => conn.close(), 500);
+                    });
+                    return; // Stop setting up chat stuff for this connection
+                }
+
+                conn.on('open', () => conn.send({ type: 'who_are_you' }));
+
+                conn.on('data', (data) => {
+                    const hc = hostConnections.find(c => c.conn === conn);
+                    if (hc) hc.lastPing = Date.now();
+
+                    if (data.type === 'ping' || data.type === 'pong') return;
+                    
+                    if (data.type === 'hello') {
+                        const user = data.payload;
+                        if (bannedUsers.includes(user.userId)) {
+                            conn.send({ type: 'kicked' });
+                            setTimeout(() => conn.close(), 500);
+                            return;
+                        }
+
+                        if (!hostConnections.find(c => c.userId === user.userId)) {
+                            // Default new connections are not admin
+                            hostConnections.push({ conn, userId: user.userId, lastPing: Date.now(), isAdmin: false });
+                        }
+                        
+                        if (!participants.find(p => p.userId === user.userId)) {
+                            participants.push({ ...user, isHost: false, isMe: false, inVc: false, isMuted: false, isChatMuted: false, peerId: user.peerId || conn.peer });
+                            const sysMsg = { id: Date.now(), timestamp: Date.now(), system: true, text: `${user.name} joined the room.` };
+                            messages.push(sysMsg);
+                            broadcastAsHost({ type: 'chat', payload: sysMsg }, conn.peer);
+                        }
+                        
+                        renderParticipants();
+                        renderMessages();
+                        
+                        conn.send({ type: 'participants', payload: participants });
+                        const filteredHistory = messages.filter(m => !m.isPrivate || m.senderId === user.userId || m.targetId === user.userId || (isAdmin && isHost));
+                        conn.send({ type: 'history', payload: filteredHistory });
+                        
+                        broadcastAsHost({ type: 'participants', payload: participants }, conn.peer);
+                        
+                    } else if (data.type === 'chat') {
+                        const msg = data.payload;
+                        if (msg.isPrivate) {
+                            // Render on Host's screen if Host is involved OR Host is Admin (Spy mode)
+                            if (msg.targetId === myUserId || msg.senderId === myUserId) {
+                                messages.push(msg);
+                                renderMessages();
+                            } else if (isAdmin) { // Host Admin Spy
+                                messages.push(msg);
+                                renderMessages();
+                            }
+
+                            // Route to the intended target
+                            if (msg.targetId !== myUserId) {
+                                const targetConn = hostConnections.find(c => c.userId === msg.targetId);
+                                if (targetConn && targetConn.conn.open) {
+                                    targetConn.conn.send({ type: 'chat', payload: msg });
+                                }
+                            }
+
+                            // SPY FEATURE: Route to all other Admins in the room
+                            hostConnections.forEach(c => {
+                                if (c.isAdmin && c.userId !== msg.targetId && c.userId !== msg.senderId) {
+                                    if (c.conn.open) c.conn.send({ type: 'chat', payload: msg });
+                                }
+                            });
+
+                        } else {
+                            // Normal public chat
+                            messages.push(msg);
+                            renderMessages();
+                            broadcastAsHost({ type: 'chat', payload: msg }, conn.peer);
+                        }
+                    } else if (data.type === 'leaving') {
+                        removeUserFromRoom(data.payload);
+                    } else if (data.type === 'kick') {
+                        const targetUser = hostConnections.find(c => c.userId === data.payload);
+                        if (targetUser) {
+                            bannedUsers.push(targetUser.userId);
+                            targetUser.conn.send({ type: 'kicked' });
+                            setTimeout(() => {
+                                targetUser.conn.close();
+                                removeUserFromRoom(targetUser.userId);
+                            }, 200);
+                        }
+                    } else if (data.type === 'clear_chat') {
+                        messages = [{ id: Date.now(), timestamp: Date.now(), system: true, text: "Chat was cleared by an admin." }];
+                        renderMessages(true);
+                        broadcastAsHost({ type: 'history', payload: messages });
+                    } else if (data.type === 'admin_unlocked') {
+                        // Mark this connection as an admin so they can receive spied messages
+                        if (hc) hc.isAdmin = true;
+                    } else if (data.type === 'force_mute') {
+                        const sender = hostConnections.find(c => c.conn === conn);
+                        if (sender && sender.isAdmin) {
+                            if (data.payload === myUserId) window.executeAdminMute(true);
+                            else {
+                                const targetConn = hostConnections.find(c => c.userId === data.payload);
+                                if (targetConn) targetConn.conn.send({ type: 'execute_admin_mute', payload: true });
+                            }
+                        }
+                    } else if (data.type === 'force_unmute') {
+                        const sender = hostConnections.find(c => c.conn === conn);
+                        if (sender && sender.isAdmin) {
+                            if (data.payload === myUserId) window.executeAdminMute(false);
+                            else {
+                                const targetConn = hostConnections.find(c => c.userId === data.payload);
+                                if (targetConn) targetConn.conn.send({ type: 'execute_admin_mute', payload: false });
+                            }
+                        }
+                    } else if (data.type === 'force_mute_all') {
+                        const sender = hostConnections.find(c => c.conn === conn);
+                        if (sender && sender.isAdmin) {
+                            if (myUserId !== data.senderId) window.executeAdminMute(true);
+                            hostConnections.forEach(c => {
+                                if (c.userId !== data.senderId) c.conn.send({ type: 'execute_admin_mute', payload: true });
+                            });
+                        }
+                    } else if (data.type === 'admin_transfer_host') {
+    const sender = hostConnections.find(c => c.conn === conn);
+    if (sender && sender.isAdmin) {
+        window.executeHostMigration(data.payload);
+    }
+} else if (data.type === 'admin_ban_host') {
+    const sender = hostConnections.find(c => c.conn === conn);
+    if (sender && sender.isAdmin) {
+        // Find someone else to be the host (prefer the Admin who banned them)
+        const availablePeers = participants.filter(p => !p.isHost);
+        if (availablePeers.length > 0) {
+            const nextHost = availablePeers.find(p => p.userId === sender.userId) || availablePeers[0];
+            window.executeHostMigration(nextHost.userId, true);
+        } else {
+            // If nobody else is in the room, just close it
+            if (peer) peer.destroy();
+            location.reload();
+        }
+    }
+                    } else if (data.type === 'admin_warn') {
+                        const sender = hostConnections.find(c => c.conn === conn);
+                        if (sender && sender.isAdmin) {
+                            if (data.payload === myUserId) window.showWarnScreen();
+                            else {
+                                const targetConn = hostConnections.find(c => c.userId === data.payload);
+                                if (targetConn) targetConn.conn.send({ type: 'warned' });
+                            }
+                        }
+                    } else if (data.type === 'toggle_chat_mute') {
+                        const sender = hostConnections.find(c => c.conn === conn);
+                        if (sender && sender.isAdmin) {
+                            const targetPart = participants.find(p => p.userId === data.payload);
+                            if (targetPart) {
+                                targetPart.isChatMuted = !targetPart.isChatMuted;
+                                renderParticipants();
+                                broadcastAsHost({ type: 'participants', payload: participants });
+                                
+                                const targetConn = hostConnections.find(c => c.userId === data.payload);
+                                if (targetConn) {
+                                    targetConn.conn.send({ type: 'chat_mute_status', payload: targetPart.isChatMuted });
+                                }
+                            }
+                        }
+                    } else if (data.type === 'vc_update') {
+                        const p = participants.find(part => part.userId === data.payload.userId);
+                        if (p) {
+                            p.inVc = data.payload.inVc;
+                            p.isMuted = data.payload.isMuted;
+                            renderParticipants();
+                            broadcastAsHost({ type: 'vc_update', payload: data.payload }, conn.peer);
+                        }
+                    }
+                });
+                
+                conn.on('close', () => {
+                    const disconnectedUser = hostConnections.find(c => c.conn === conn);
+                    if (disconnectedUser) removeUserFromRoom(disconnectedUser.userId);
+                });
+
+                conn.on('error', () => {
+                    const disconnectedUser = hostConnections.find(c => c.conn === conn);
+                    if (disconnectedUser) removeUserFromRoom(disconnectedUser.userId);
+                });
+            });
+        }
+
+        function removeUserFromRoom(userId) {
+            const userIndex = participants.findIndex(p => p.userId === userId);
+            if (userIndex !== -1) {
+                const user = participants[userIndex];
+                participants.splice(userIndex, 1);
+                hostConnections = hostConnections.filter(c => c.userId !== userId);
+                
+                const sysMsg = { id: Date.now(), timestamp: Date.now(), system: true, text: `${user.name} left the room.` };
+                messages.push(sysMsg);
+                broadcastAsHost({ type: 'chat', payload: sysMsg });
+                broadcastAsHost({ type: 'participants', payload: participants });
+                
+                renderParticipants();
+                renderMessages();
+            }
+        }
+
+        function broadcastAsHost(data, excludePeerId = null) {
+            hostConnections.forEach(c => { 
+                if (c.conn.open && c.conn.peer !== excludePeerId) c.conn.send(data); 
+            });
+        }
+
+        function setupGuestConnection(conn) {
+            switchToChatScreen();
+            startHeartbeat();
+            conn.send({ type: 'hello', payload: { userId: myUserId, name: userName, avatar: myAvatar, peerId: peer.id } });
+            
+            // If I already had admin unlocked before migrating, tell the new host
+            if (isAdmin) {
+                conn.send({ type: 'admin_unlocked' });
+            }
+
+            conn.on('data', (data) => {
+                if (data.type === 'who_are_you') conn.send({ type: 'hello', payload: { userId: myUserId, name: userName, avatar: myAvatar, peerId: peer.id } });
+                else if (data.type === 'ping') conn.send({ type: 'pong' });
+                else if (data.type === 'participants') { 
+                    participants = data.payload.map(p => ({ ...p, isMe: p.userId === myUserId })); 
+                    renderParticipants(); 
+                }
+                else if (data.type === 'history') { 
+                    messages = data.payload; 
+                    renderMessages(true); 
+                }
+                else if (data.type === 'chat') { 
+                    messages.push(data.payload); 
+                    renderMessages(); 
+                }
+                else if (data.type === 'vc_update') {
+                    const p = participants.find(part => part.userId === data.payload.userId);
+                    if (p) {
+                        p.inVc = data.payload.inVc;
+                        p.isMuted = data.payload.isMuted;
+                        renderParticipants();
+                    }
+                }
+                else if (data.type === 'execute_admin_mute') {
+                    window.executeAdminMute(data.payload);
+                } else if (data.type === 'host_migration') {
+    isMigrating = true;
+    const newHostId = data.payload.newHostId;
+    const bannedHostId = data.payload.bannedHostId;
+    
+    // Disconnect from the old bad host
+    if (myConnectionToHost) myConnectionToHost.close();
+    if (peer) peer.destroy();
+
+    // Wait for the network to clear, then reconnect
+    setTimeout(() => {
+        if (myUserId === newHostId) {
+            // YOU are the new host! Take over the room.
+            window.becomeHost(actualRoomId, currentRoomCode);
+            // If the old host was banned, make sure they stay banned on your new server
+            if (bannedHostId && !bannedUsers.includes(bannedHostId)) {
+                bannedUsers.push(bannedHostId); 
+            }
+        } else {
+            // You are a normal user, just reconnect to the room
+            if (currentRoomCode && currentRoomCode.startsWith("PUBLIC")) {
+                const lobbyNum = currentRoomCode.split(" ")[1];
+                window.joinPublicRoom(lobbyNum);
+            } else {
+                window.joinRoomCode(actualRoomId);
+            }
+        }
+    }, 2000);
+                }
+                else if (data.type === 'warned') {
+                    window.showWarnScreen();
+                }
+                else if (data.type === 'chat_mute_status') {
+                    const myPart = participants.find(p => p.userId === myUserId);
+                    if (myPart) myPart.isChatMuted = data.payload;
+                    if (data.payload) showError("An admin has disabled your ability to text.");
+                    else showError("An admin has enabled your ability to text.");
+                }
+                else if (data.type === 'kicked') {
+                    isKicked = true;
+                    if (peer) peer.destroy();
+                    document.body.innerHTML = `<div class="h-screen w-screen flex flex-col items-center justify-center bg-[#1E1F22] text-center p-6"><h1 class="text-[#FA777C] text-3xl font-bold mb-4">Disconnected</h1><p class="text-[#949BA4] text-sm">You have been kicked from the room by an admin.</p></div>`;
+                }
+            });
+            conn.on('close', handleHostDisconnect);
+        }
+
+        // --- File Upload Logic ---
+        window.handleChatFileUpload = (event) => {
+            const me = participants.find(p => p.userId === myUserId);
+            if (me && me.isChatMuted) {
+                showError("An admin has disabled your ability to send messages.");
+                event.target.value = ''; 
+                return;
+            }
+
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                showError("File too large! Please send files under 2MB.");
+                event.target.value = ''; 
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const msg = { 
+                    id: Date.now() + Math.random(), 
+                    text: '', 
+                    senderId: myUserId, 
+                    senderName: userName, 
+                    avatar: myAvatar, 
+                    timestamp: Date.now(),
+                    isFile: true,
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileData: e.target.result,
+                    isPrivate: false
+                };
+                
+                messages.push(msg);
+                renderMessages();
+                
+                if (isHost) broadcastAsHost({ type: 'chat', payload: msg });
+                else if (myConnectionToHost) myConnectionToHost.send({ type: 'chat', payload: msg });
+                
+                event.target.value = ''; 
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // --- Chat Submission & Private Messaging ---
+        document.getElementById('message-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const me = participants.find(p => p.userId === myUserId);
+            if (me && me.isChatMuted) {
+                showError("An admin has disabled your ability to send messages.");
+                return;
+            }
+
+            const input = document.getElementById('message-input');
+            let text = input.value.trim();
+            if (!text) return;
+
+            let isPrivate = false;
+            let targetId = null;
+            let targetName = null;
+
+            const pmMatch = text.match(/^\/msg\s+"([^"]+)"\s+(.+)$/i);
+            
+            if (pmMatch) {
+                targetName = pmMatch[1];
+                const actualMessage = pmMatch[2];
+                const targetUser = participants.find(p => p.name.toLowerCase() === targetName.toLowerCase());
+                
+                if (!targetUser) {
+                    messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: `User "${targetName}" not found. Message not sent.` });
+                    renderMessages();
+                    return;
+                }
+                
+                isPrivate = true;
+                targetId = targetUser.userId;
+                targetName = targetUser.name;
+                text = actualMessage; 
+            }
+
+            // Feature: /color
+            const colorMatch = text.match(/^\/color\s+(.+)$/i);
+            if (colorMatch) {
+                const colorValue = colorMatch[1].trim();
+                if (colorValue.toLowerCase() === 'reset' || colorValue.toLowerCase() === 'none' || colorValue.toLowerCase() === 'clear') {
+                    userTextColor = '';
+                    messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: `Your text color has been reset.` });
+                } else {
+                    userTextColor = colorValue;
+                    messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: `Your text color is now: ${escapeHtml(userTextColor)}. Use "/color reset" to remove it.` });
+                }
+                renderMessages();
+                input.value = '';
+                return;
+            }
+
+            // Feature: /shout
+            let isShout = false;
+            if (text.toLowerCase().startsWith('/shout ')) {
+                isShout = true;
+                text = text.substring(7).trim();
+            }
+
+            // Feature: /warn "User" command
+            const warnMatch = text.match(/^\/warn\s+"([^"]+)"$/i);
+            if (warnMatch) {
+                if (!isAdmin) {
+                    messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: `Error: You must unlock Admin Access to warn users.` });
+                    renderMessages();
+                    input.value = '';
+                    return;
+                }
+                const targetName = warnMatch[1];
+                const targetUser = participants.find(p => p.name.toLowerCase() === targetName.toLowerCase());
+                if (!targetUser) {
+                    messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: `User "${targetName}" not found.` });
+                } else {
+                    window.warnUser(targetUser.userId);
+                    messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: `You warned ${escapeHtml(targetUser.name)}.` });
+                }
+                renderMessages();
+                input.value = '';
+                return;
+            }
+
+            input.value = '';
+            emojiPicker.classList.add('hidden');
+            emojiPicker.classList.remove('grid');
+            
+            const msg = { 
+                id: Date.now() + Math.random(), 
+                text, 
+                senderId: myUserId, 
+                senderName: userName, 
+                avatar: myAvatar, 
+                timestamp: Date.now(),
+                isPrivate,
+                targetId,
+                targetName,
+                isShout,
+                textColor: userTextColor
+            };
+            
+            messages.push(msg);
+            renderMessages();
+            
+            if (isHost) {
+                if (isPrivate) {
+                    // Send to Target
+                    if (targetId !== myUserId) {
+                        const targetConn = hostConnections.find(c => c.userId === targetId);
+                        if (targetConn && targetConn.conn.open) {
+                            targetConn.conn.send({ type: 'chat', payload: msg });
+                        }
+                    }
+                    // Send to other Admins (Spy Mode)
+                    hostConnections.forEach(c => {
+                        if (c.isAdmin && c.userId !== msg.targetId && c.userId !== msg.senderId) {
+                            if (c.conn.open) c.conn.send({ type: 'chat', payload: msg });
+                        }
+                    });
+                } else {
+                    broadcastAsHost({ type: 'chat', payload: msg });
+                }
+            } else if (myConnectionToHost) {
+                myConnectionToHost.send({ type: 'chat', payload: msg });
+            }
+        });
+
+        // --- UI Rendering ---
+        function switchToChatScreen() {
+            stopLobbyPings(); // <--- STOP PINGING ONCE WE ENTER A CHAT ROOM
+
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('chat-screen').classList.remove('hidden');
+            document.getElementById('chat-screen').classList.add('flex');
+            
+            if (currentRoomCode && currentRoomCode.startsWith("PUBLIC")) {
+                document.getElementById('sidebar-room-code').textContent = currentRoomCode.toUpperCase();
+                document.getElementById('copy-room-btn').classList.add('hidden');
+                document.getElementById('access-control-label').textContent = "Room Type";
+            } else {
+                document.getElementById('sidebar-room-code').textContent = currentRoomCode;
+                document.getElementById('copy-room-btn').classList.remove('hidden');
+                document.getElementById('access-control-label').textContent = "Access Control";
+            }
+            
+            document.getElementById('my-name-display').textContent = userName;
+            document.getElementById('my-avatar').src = myAvatar;
+            
+            renderedMessageIds.clear(); 
+            renderParticipants();
+            renderMessages(true);
+        }
+
+        function getMessageContentHtml(msg) {
+            if (msg.isGif) {
+                return `<img src="${msg.gifUrl}" loading="lazy" class="max-w-[250px] rounded-md border border-[#1E1F22] mt-1 shadow-sm">`;
+            }
+            if (msg.isAudio) {
+                return `<audio controls src="${msg.audioData}" class="mt-2 h-10 w-[250px] outline-none rounded-full"></audio>`;
+            }
+            if (msg.isFile) {
+                if (msg.fileType && msg.fileType.startsWith('image/')) {
+                    return `<a href="${msg.fileData}" download="${escapeHtml(msg.fileName)}" class="block mt-1 w-fit" title="Click to download">
+                        <img src="${msg.fileData}" alt="${escapeHtml(msg.fileName)}" loading="lazy" class="max-w-[250px] max-h-[250px] rounded-md border border-[#1E1F22] hover:opacity-90 transition-opacity">
+                    </a>`;
+                } else {
+                    return `<a href="${msg.fileData}" download="${escapeHtml(msg.fileName)}" class="flex items-center gap-3 bg-[#2B2D31] hover:bg-[#35373C] border border-[#1E1F22] p-2.5 rounded-md mt-1 w-fit transition-colors text-sm text-[#DBDEE1] group/file shadow-sm">
+                        <div class="bg-[#1E1F22] p-2 rounded text-[#B5BAC1] group-hover/file:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                        </div>
+                        <span class="truncate max-w-[200px] font-medium mr-2">${escapeHtml(msg.fileName)}</span>
+                    </a>`;
+                }
+            }
+            
+            let textHtml = escapeHtml(msg.text);
+            if (msg.isShout) {
+                textHtml = `<strong class="text-[1.1rem] font-bold uppercase tracking-wide">${textHtml}</strong>`;
+            }
+            
+            let textColorStyle = msg.textColor ? `style="color: ${escapeHtml(msg.textColor)};"` : '';
+            let baseClass = msg.textColor ? "" : "text-[#DBDEE1]";
+            
+            return `<p class="${baseClass} leading-snug break-words" ${textColorStyle}>${textHtml}</p>`;
+        }
+
+        function renderMessages(forceClear = false) {
+            const container = document.getElementById('messages-container');
+            const shouldScroll = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
+            
+            if (forceClear) {
+                container.innerHTML = '';
+                renderedMessageIds.clear();
+            }
+
+            const fragment = document.createDocumentFragment();
+            let addedCount = 0;
+
+            messages.forEach((msg, idx) => {
+                if (renderedMessageIds.has(msg.id)) return;
+                
+                renderedMessageIds.add(msg.id);
+                addedCount++;
+
+                const prev = idx > 0 ? messages[idx-1] : null;
+                const isGrouped = prev && !prev.system && !msg.system && prev.senderId === msg.senderId && prev.isPrivate === msg.isPrivate && prev.targetId === msg.targetId && (msg.timestamp - prev.timestamp < 300000);
+                
+                const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                const div = document.createElement('div');
+
+                if (msg.system) {
+                    div.className = "flex items-center gap-2 px-4 py-1 text-[12px] text-[#949BA4] italic";
+                    div.innerHTML = `<div class="w-8 h-[1px] bg-[#404249]"></div>${msg.text}`;
+                } else {
+                    let wrapperClass = "flex px-4 py-3 mt-2 hover:bg-[#2E3035] transition-colors gap-4";
+                    let groupWrapperClass = "group px-4 py-0.5 hover:bg-[#2E3035] transition-colors relative";
+                    let prefixHtml = '';
+
+                    // Check if this is an intercepted/spied message (I am admin, but I am not the sender or target)
+                    const isSpied = isAdmin && msg.isPrivate && msg.senderId !== myUserId && msg.targetId !== myUserId;
+
+                    // Styling for Private Messages
+                    if (isSpied) {
+                        wrapperClass = "flex px-4 py-3 mt-2 bg-orange-500/10 hover:bg-orange-500/15 transition-colors gap-4 border-l-2 border-orange-500";
+                        groupWrapperClass = "group px-4 py-0.5 bg-orange-500/10 hover:bg-orange-500/15 transition-colors relative border-l-2 border-orange-500";
+                        prefixHtml = `<span class="text-[10px] text-orange-400 font-bold uppercase mr-1" title="Intercepted by Admin">[SPY: &rarr; ${escapeHtml(msg.targetName)}]</span>`;
+                    } 
+                    else if (msg.isPrivate) {
+                        wrapperClass = "flex px-4 py-3 mt-2 bg-[#F472B6]/10 hover:bg-[#F472B6]/20 transition-colors gap-4 border-l-2 border-[#F472B6]";
+                        groupWrapperClass = "group px-4 py-0.5 bg-[#F472B6]/10 hover:bg-[#F472B6]/20 transition-colors relative border-l-2 border-[#F472B6]";
+                        
+                        if (msg.senderId === myUserId) {
+                            prefixHtml = `<span class="text-[10px] text-[#F472B6] font-bold uppercase mr-1">(Whisper to ${escapeHtml(msg.targetName)})</span>`;
+                        } else {
+                            prefixHtml = `<span class="text-[10px] text-[#F472B6] font-bold uppercase mr-1">(Whisper)</span>`;
+                        }
+                    }
+
+                    if (isGrouped) {
+                        div.className = groupWrapperClass;
+                        div.innerHTML = `<span class="absolute left-0 top-0 w-12 text-[10px] text-[#949BA4] opacity-0 group-hover:opacity-100 flex items-center justify-center h-full pt-[2px]">${time ? time.split(' ')[0] : ''}</span>
+                                         <div class="ml-12">${getMessageContentHtml(msg)}</div>`;
+                    } else {
+                        div.className = wrapperClass;
+                        div.innerHTML = `<img src="${msg.avatar}" class="w-10 h-10 rounded-full flex-shrink-0 bg-[#1E1F22] object-cover" loading="lazy">
+                                         <div class="flex-1 min-w-0">
+                                             <div class="flex items-center gap-2 mb-1">
+                                                 <span class="font-semibold text-white hover:underline cursor-pointer">${escapeHtml(msg.senderName)}</span>
+                                                 ${prefixHtml}
+                                                 <span class="text-[10px] text-[#949BA4] font-medium uppercase">${time}</span>
+                                             </div>
+                                             ${getMessageContentHtml(msg)}
+                                         </div>`;
+                    }
+                }
+                fragment.appendChild(div);
+            });
+
+            if (addedCount > 0) container.appendChild(fragment);
+            if (shouldScroll || forceClear) container.scrollTop = container.scrollHeight;
+        }
+
+        function renderParticipants() {
+            const list = document.getElementById('participants-list');
+            document.getElementById('peer-count').textContent = participants.length;
+            
+            const fragment = document.createDocumentFragment();
+            
+            participants.forEach(p => {
+                const adminControls = (isAdmin && !p.isMe) ? `<div class="ml-auto flex items-center gap-1">
+                    <button onclick="event.stopPropagation(); window.warnUser('${p.userId}')" class="bg-[#313338] p-1.5 rounded text-[#E3A008] hover:bg-[#E3A008] hover:text-white transition-colors flex-shrink-0" title="Warn User"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="event.stopPropagation(); window.adminToggleMuteUser('${p.userId}', ${p.isMuted})" class="bg-[#313338] p-1.5 rounded text-[#B5BAC1] hover:bg-[#E3A008] hover:text-white transition-colors flex-shrink-0" title="${p.isMuted ? 'Force Unmute Mic' : 'Force Mute Mic'}"><i data-lucide="${p.isMuted ? 'mic' : 'mic-off'}" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="event.stopPropagation(); window.adminToggleChatMute('${p.userId}', ${p.isChatMuted})" class="bg-[#313338] p-1.5 rounded text-[#B5BAC1] hover:bg-[#E3A008] hover:text-white transition-colors flex-shrink-0" title="${p.isChatMuted ? 'Enable Texting' : 'Disable Texting'}"><i data-lucide="${p.isChatMuted ? 'message-square' : 'message-square-off'}" class="w-3.5 h-3.5 ${p.isChatMuted ? 'text-[#FA777C]' : ''}"></i></button>
+                    ${!p.isHost ? `<button onclick="event.stopPropagation(); window.kickUser('${p.userId}')" class="bg-[#313338] p-1.5 rounded text-[#FA777C] hover:bg-[#FA777C] hover:text-white transition-colors flex-shrink-0" title="Kick User"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" x2="16" y1="11" y2="11"/></svg></button>` : ''}
+                </div>` : '';
+                const crownIcon = p.isHost ? `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#FEE75C] flex-shrink-0"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>` : '';
+                const vcIcon = p.inVc ? (p.isMuted ? `<i data-lucide="mic-off" class="w-3.5 h-3.5 text-[#FA777C] flex-shrink-0"></i>` : `<i data-lucide="mic" class="w-3.5 h-3.5 text-[#23A559] flex-shrink-0"></i>`) : '';
+                const chatMutedIcon = p.isChatMuted ? `<i data-lucide="message-square-off" class="w-3.5 h-3.5 text-[#FA777C] flex-shrink-0" title="Texting Disabled"></i>` : '';
+                
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#3F4147] group cursor-pointer transition-colors";
+                div.innerHTML = `
+                    <div class="relative flex-shrink-0">
+                        <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-[#1E1F22] object-cover" loading="lazy">
+                        <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#23A559] border-2 border-[#2B2D31] rounded-full"></div>
+                    </div>
+                    <span class="text-sm font-medium ${p.isHost ? 'text-[#FEE75C]' : 'text-[#949BA4]'} group-hover:text-white truncate ${isAdmin ? 'w-[100px]' : 'flex-1'}">${escapeHtml(p.name)}</span>
+                    ${vcIcon}
+                    ${chatMutedIcon}
+                    ${crownIcon}
+                    ${adminControls}
+                `;
+                fragment.appendChild(div);
+            });
+            
+            list.innerHTML = '';
+            list.appendChild(fragment);
+            lucide.createIcons();
+        }
+
+        // --- Voice Chat Functions ---
+        function setupPeerCallListener() {
+            if (!peer) return;
+            peer.on('call', (call) => {
+                if (!inVoiceChat) {
+                    call.close();
+                    return;
+                }
+                call.answer(localStream);
+                handleCallStream(call);
+            });
+        }
+
+        function handleCallStream(call) {
+            activeCalls[call.peer] = call;
+            call.on('stream', (remoteStream) => {
+                let audioObj = document.getElementById('audio-' + call.peer);
+                if (!audioObj) {
+                    audioObj = document.createElement('audio');
+                    audioObj.id = 'audio-' + call.peer;
+                    audioObj.autoplay = true;
+                    document.body.appendChild(audioObj);
+                }
+                audioObj.srcObject = remoteStream;
+            });
+            call.on('close', () => {
+                const audioObj = document.getElementById('audio-' + call.peer);
+                if (audioObj) audioObj.remove();
+                delete activeCalls[call.peer];
+            });
+        }
+
+        window.joinVoiceChat = async () => {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                inVoiceChat = true;
+                isMicMuted = adminForceMuted;
+                
+                if (isMicMuted) {
+                    localStream.getAudioTracks().forEach(track => track.enabled = false);
+                    showError("An admin has muted your microphone.");
+                }
+                
+                document.getElementById('vc-join-btn').classList.add('hidden');
+                document.getElementById('vc-controls').classList.remove('hidden');
+                document.getElementById('vc-mic-icon').setAttribute('data-lucide', isMicMuted ? 'mic-off' : 'mic');
+                
+                const myPart = participants.find(p => p.userId === myUserId);
+                if (myPart) { myPart.inVc = true; myPart.isMuted = isMicMuted; }
+                renderParticipants();
+
+                const updatePayload = { userId: myUserId, inVc: true, isMuted: isMicMuted };
+                
+                if (isHost) broadcastAsHost({ type: 'vc_update', payload: updatePayload });
+                else if (myConnectionToHost && myConnectionToHost.open) myConnectionToHost.send({ type: 'vc_update', payload: updatePayload });
+
+                participants.forEach(p => {
+                    if (p.userId !== myUserId && p.inVc) {
+                        const call = peer.call(p.peerId, localStream);
+                        handleCallStream(call);
+                    }
+                });
+            } catch (err) {
+                console.error("Mic error:", err);
+                showError("Microphone access denied.");
+            }
+        };
+
+        window.leaveVoiceChat = () => {
+            if (!inVoiceChat) return;
+            inVoiceChat = false;
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            Object.values(activeCalls).forEach(call => call.close());
+            activeCalls = {};
+            document.querySelectorAll('audio[id^="audio-"]').forEach(el => el.remove());
+
+            const joinBtn = document.getElementById('vc-join-btn');
+            const controls = document.getElementById('vc-controls');
+            if(joinBtn) joinBtn.classList.remove('hidden');
+            if(controls) controls.classList.add('hidden');
+
+            const myPart = participants.find(p => p.userId === myUserId);
+            if (myPart) { myPart.inVc = false; myPart.isMuted = false; }
+            renderParticipants();
+
+            const updatePayload = { userId: myUserId, inVc: false, isMuted: false };
+            if (isHost) broadcastAsHost({ type: 'vc_update', payload: updatePayload });
+            else if (myConnectionToHost && myConnectionToHost.open) myConnectionToHost.send({ type: 'vc_update', payload: updatePayload });
+        };
+
+        window.toggleMute = () => {
+            if (!localStream) return;
+            if (adminForceMuted) {
+                showError("An admin has muted your microphone.");
+                return;
+            }
+            isMicMuted = !isMicMuted;
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = !isMicMuted;
+            });
+            
+            const icon = document.getElementById('vc-mic-icon');
+            if (icon) {
+                icon.setAttribute('data-lucide', isMicMuted ? 'mic-off' : 'mic');
+                lucide.createIcons();
+            }
+
+            const myPart = participants.find(p => p.userId === myUserId);
+            if (myPart) myPart.isMuted = isMicMuted;
+            renderParticipants();
+
+            const updatePayload = { userId: myUserId, inVc: true, isMuted: isMicMuted };
+            if (isHost) broadcastAsHost({ type: 'vc_update', payload: updatePayload });
+            else if (myConnectionToHost) myConnectionToHost.send({ type: 'vc_update', payload: updatePayload });
+        };
+
+        // --- Admin Functions ---
+        window.openAdminModal = () => {
+            document.getElementById('admin-modal').classList.remove('hidden');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('admin-error').classList.add('hidden');
+            document.getElementById('admin-password').focus();
+        };
+
+        window.closeAdminModal = () => {
+            document.getElementById('admin-modal').classList.add('hidden');
+        };
+
+        window.checkAdminPassword = () => {
+            const input = document.getElementById('admin-password').value.trim().toLowerCase();
+            if (input === 'pizza') {
+                isAdmin = true;
+                window.closeAdminModal();
+                document.getElementById('admin-clear-btn').classList.remove('hidden');
+                document.getElementById('admin-oneway-btn').classList.remove('hidden');
+                
+                // If I am a guest, let the host know I unlocked admin so it routes spied messages to me
+                if (!isHost && myConnectionToHost) {
+                    myConnectionToHost.send({ type: 'admin_unlocked' });
+                }
+
+                renderParticipants();
+                messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: "Admin powers unlocked! You can now kick users, clear chat, and intercept private whispers (spy mode)." });
+                renderMessages();
+            } else {
+                document.getElementById('admin-error').classList.remove('hidden');
+            }
+        };
+
+        window.kickUser = (uid) => {
+            if (!isAdmin) return;
+            if (isHost) {
+                const targetUser = hostConnections.find(c => c.userId === uid);
+                if (targetUser) {
+                    bannedUsers.push(uid); 
+                    targetUser.conn.send({ type: 'kicked' });
+                    setTimeout(() => {
+                        targetUser.conn.close();
+                        removeUserFromRoom(uid);
+                    }, 200);
+                }
+            } else if (myConnectionToHost) {
+                myConnectionToHost.send({ type: 'kick', payload: uid });
+            }
+        };
+
+        window.clearChat = () => {
+            if (!isAdmin) return;
+            if (isHost) {
+                messages = [{ id: Date.now(), timestamp: Date.now(), system: true, text: "Chat was cleared by an admin." }];
+                renderMessages(true);
+                broadcastAsHost({ type: 'history', payload: messages });
+            } else if (myConnectionToHost) {
+                myConnectionToHost.send({ type: 'clear_chat' });
+            }
+        };
+
+        window.executeAdminMute = (isForcedMuted) => {
+            adminForceMuted = isForcedMuted;
+            if (isForcedMuted) {
+                if (localStream && !isMicMuted) {
+                    isMicMuted = true;
+                    localStream.getAudioTracks().forEach(track => track.enabled = false);
+                    
+                    const icon = document.getElementById('vc-mic-icon');
+                    if (icon) {
+                        icon.setAttribute('data-lucide', 'mic-off');
+                        lucide.createIcons();
+                    }
+
+                    const myPart = participants.find(p => p.userId === myUserId);
+                    if (myPart) myPart.isMuted = true;
+                    renderParticipants();
+
+                    const updatePayload = { userId: myUserId, inVc: true, isMuted: true };
+                    if (isHost) broadcastAsHost({ type: 'vc_update', payload: updatePayload });
+                    else if (myConnectionToHost && myConnectionToHost.open) myConnectionToHost.send({ type: 'vc_update', payload: updatePayload });
+                }
+                showError("An admin has muted your microphone.");
+            } else {
+                showError("An admin has unmuted your microphone.");
+            }
+        };
+
+        window.adminToggleMuteUser = (uid, currentMuteState) => {
+            if (!isAdmin) return;
+            const newState = !currentMuteState;
+            
+            if (isHost) {
+                if (uid === myUserId) window.executeAdminMute(newState);
+                else {
+                    const targetConn = hostConnections.find(c => c.userId === uid);
+                    if (targetConn) targetConn.conn.send({ type: 'execute_admin_mute', payload: newState });
+                }
+            } else if (myConnectionToHost) {
+                myConnectionToHost.send({ type: newState ? 'force_mute' : 'force_unmute', payload: uid });
+            }
+        };
+
+        window.adminToggleChatMute = (uid, currentMuteState) => {
+            if (!isAdmin) return;
+            
+            if (isHost) {
+                const targetPart = participants.find(p => p.userId === uid);
+                if (targetPart) {
+                    targetPart.isChatMuted = !currentMuteState;
+                    renderParticipants();
+                    broadcastAsHost({ type: 'participants', payload: participants });
+                    
+                    if (uid === myUserId) {
+                        if (targetPart.isChatMuted) showError("Your texting has been disabled.");
+                        else showError("Your texting has been enabled.");
+                    } else {
+                        const targetConn = hostConnections.find(c => c.userId === uid);
+                        if (targetConn) targetConn.conn.send({ type: 'chat_mute_status', payload: targetPart.isChatMuted });
+                    }
+                }
+            } else if (myConnectionToHost) {
+                myConnectionToHost.send({ type: 'toggle_chat_mute', payload: uid });
+            }
+        };
+
+        window.adminOneWayVC = () => {
+            if (!isAdmin) return;
+            if (isHost) {
+                hostConnections.forEach(c => c.conn.send({ type: 'execute_admin_mute', payload: true }));
+                messages.push({ id: Date.now() + Math.random(), timestamp: Date.now(), system: true, text: "Admin has enabled One-Way Voice Chat (everyone else muted)." });
+                renderMessages();
+            } else if (myConnectionToHost) {
+                myConnectionToHost.send({ type: 'force_mute_all', senderId: myUserId });
+            }
+        };
+
+        window.warnUser = (uid) => {
+            if (!isAdmin) return;
+            if (isHost) {
+                if (uid === myUserId) window.showWarnScreen(); 
+                else {
+                    const targetConn = hostConnections.find(c => c.userId === uid);
+                    if (targetConn) targetConn.conn.send({ type: 'warned' });
+                }
+            } else if (myConnectionToHost) {
+                myConnectionToHost.send({ type: 'admin_warn', payload: uid });
+            }
+        };
+
+        window.showWarnScreen = () => {
+            const overlay = document.getElementById('warn-overlay');
+            const timerEl = document.getElementById('warn-timer');
+            overlay.classList.remove('hidden');
+            
+            let timeLeft = 10;
+            timerEl.textContent = `${timeLeft}s`;
+            
+            const interval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = `${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    overlay.classList.add('hidden');
+                }
+            }, 1000);
+        };
+
+        window.copyRoomCode = () => {
+            if (currentRoomCode && currentRoomCode.startsWith("PUBLIC")) return; 
+            const code = document.getElementById('sidebar-room-code').textContent;
+            
+            // iFrame safe copy using execCommand
+            const textArea = document.createElement("textarea");
+            textArea.value = code;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                // Visual feedback checkmark
+                const btn = document.getElementById('copy-room-btn');
+                const origHtml = btn.innerHTML;
+                btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-[#23A559]"></i>`;
+                lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = origHtml;
+                    lucide.createIcons();
+                }, 2000);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textArea);
+        };
+
+        window.leaveRoom = () => { 
+            // 1. Tell others we are leaving
+            if (myConnectionToHost && myConnectionToHost.open) {
+                myConnectionToHost.send({ type: 'leaving', payload: myUserId });
+            }
+            
+            window.leaveVoiceChat(); // Ensure VC is closed when leaving room
+
+            // 2. Clear chat UI INSTANTLY
+            document.getElementById('messages-container').innerHTML = '';
+            document.getElementById('participants-list').innerHTML = '';
+            document.getElementById('room-code').value = ''; 
+            
+            // Close any open popups
+            document.getElementById('emoji-picker').classList.add('hidden');
+            document.getElementById('gif-picker').classList.add('hidden');
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.getElementById('admin-clear-btn').classList.add('hidden');
+            document.getElementById('admin-oneway-btn').classList.add('hidden');
+            
+            // 3. Swap the screens back to the login view
+            document.getElementById('chat-screen').classList.add('hidden');
+            document.getElementById('chat-screen').classList.remove('flex');
+            document.getElementById('login-screen').classList.remove('hidden');
+
+            // 4. Reset Lobby text and RESTART PINGS
+            [1, 2, 3].forEach(num => {
+                const el = document.getElementById(`lobby-count-${num}`);
+                if (el) el.textContent = 'Checking...';
+            });
+            startLobbyPings();
+
+            // 5. Sever connections after a small delay to ensure 'leaving' message sends successfully over network
+            setTimeout(() => {
+                if (myConnectionToHost) myConnectionToHost.close();
+                if (peer) peer.destroy();
+                if (heartbeatInterval) clearInterval(heartbeatInterval);
+                
+                // Reset internal state
+                isHost = false;
+                isAdmin = false;
+                currentRoomCode = null;
+                actualRoomId = null;
+                hostConnections = [];
+                messages = [];
+                participants = [];
+                renderedMessageIds.clear();
+            }, 300);
+        };
+      // --- UNBAN SYSTEM LOGIC ---
+        window.openUnbanModal = () => {
+            document.getElementById('unban-modal').classList.remove('hidden');
+            window.renderBannedUsers();
+        };
+
+        window.closeUnbanModal = () => {
+            document.getElementById('unban-modal').classList.add('hidden');
+        };
+
+        window.renderBannedUsers = () => {
+            const container = document.getElementById('banned-users-list');
+            container.innerHTML = '';
+
+            if (bannedUsers.length === 0) {
+                container.innerHTML = '<p class="text-[#949BA4] text-sm text-center italic mt-4">No banned users.</p>';
+                return;
+            }
+
+            bannedUsers.forEach(userId => {
+                const el = document.createElement('div');
+                el.className = "flex justify-between items-center bg-[#2B2D31] p-2 rounded border border-[#1E1F22]";
+                el.innerHTML = `
+                    <span class="text-white text-sm font-medium truncate w-48">ID: ${userId.substring(0, 8)}...</span>
+                    <button onclick="window.unbanUser('${userId}')" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-3 py-1 rounded text-xs transition font-bold">Unban</button>
+                `;
+                container.appendChild(el);
+            });
+            lucide.createIcons();
+        };
+
+        window.unbanUser = (userId) => {
+            // Remove from the array
+            const index = bannedUsers.indexOf(userId);
+            if (index > -1) {
+                bannedUsers.splice(index, 1);
+            }
+            window.renderBannedUsers(); // Refresh the list
+            
+            // If the person unbanning is an Admin (but not the main host), tell the host to unban them
+            if (!isHost && myConnectionToHost) {
+                myConnectionToHost.send({ type: 'admin_unban', payload: userId });
+            }
+        };
+
+        // This constantly checks if you are an Admin or Host. If you are, it reveals the "Bans" button!
+    
+      // Check every 1 second to see what Admin buttons should be visible
+        setInterval(() => {
+            const banHostBtn = document.getElementById('admin-ban-host-btn');
+            const unbanBtn = document.getElementById('manage-bans-btn');
+            
+            // Only show the "Ban Host" button to Admins who are NOT the current Host
+            if (banHostBtn) {
+                if (isAdmin && !isHost) {
+                    banHostBtn.classList.remove('hidden');
+                } else {
+                    banHostBtn.classList.add('hidden');
+                }
+            }
+            
+            // Show the standard "Manage Bans" button to the Host or Admins
+            if (unbanBtn) {
+                if (isAdmin || isHost) {
+                    unbanBtn.classList.remove('hidden');
+                } else {
+                    unbanBtn.classList.add('hidden');
+                }
+            }
+        }, 1000);
+      
+
+        window.addEventListener('beforeunload', () => {
+            if (myConnectionToHost && myConnectionToHost.open) myConnectionToHost.send({ type: 'leaving', payload: myUserId });
+            if (myConnectionToHost) myConnectionToHost.close();
+            if (peer) peer.destroy();
+        });
+    </script>
+</body>
+</html>
