@@ -57,13 +57,13 @@
 <body class="text-[#DBDEE1] h-[100dvh] w-screen overflow-hidden flex items-center justify-center relative">
 
     <!-- GLOBAL ERROR TOAST -->
-    <div id="error-box" class="hidden absolute top-6 left-1/2 transform -translate-x-1/2 z-[200] bg-[#FA777C] text-white px-6 py-3 rounded shadow-xl font-medium text-sm transition-all fade-in flex items-center gap-2">
+    <div id="error-box" class="hidden absolute top-6 left-1/2 transform -translate-x-1/2 z-[200] bg-[#85070b] text-white px-6 py-3 rounded shadow-xl font-medium text-sm transition-all fade-in flex items-center gap-2">
         <i data-lucide="alert-circle" class="w-5 h-5"></i>
         <span id="error-message-text"></span>
     </div>
 
     <!-- WARN OVERLAY -->
-    <div id="warn-overlay" class="hidden absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-[#FA777C]/95 backdrop-blur-md fade-in pointer-events-auto">
+    <div id="warn-overlay" class="hidden absolute inset-0 z-[9999] flex flex-col items-center justify-center bg-[#85070b]/95 backdrop-blur-md fade-in pointer-events-auto">
         <i data-lucide="alert-triangle" class="w-24 h-24 text-white mb-6 animate-pulse"></i>
         <h1 class="text-4xl md:text-6xl font-black text-white uppercase tracking-widest mb-4 text-center">WARNING</h1>
         <p class="text-xl text-white font-medium text-center px-6">You have been warned by an admin.<br>Please follow the room rules.</p>
@@ -72,15 +72,15 @@
   
 
     <!-- LOGIN SCREEN -->
-    <div id="login-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#1E1F22] p-4 fade-in overflow-y-auto">
-        <div class="bg-[#313338] p-8 rounded-lg shadow-2xl w-full max-w-[480px] text-center my-auto border border-[#1E1F22]">
+    <div id="login-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#590785] p-4 fade-in overflow-y-auto">
+        <div class="bg-[#313338] p-8 rounded-lg shadow-2xl w-full max-w-[480px] text-center my-auto border border-[#590785]">
             <h1 class="text-2xl font-bold text-white mb-2">Welcome back!</h1>
             <p class="text-[#B5BAC1] mb-8">We're so excited to see you again!</p>
             
             <!-- AVATAR CUSTOMIZER -->
-            <div class="flex flex-col items-center mb-6 bg-[#2B2D31] p-5 rounded-md border border-[#1E1F22]">
+            <div class="flex flex-col items-center mb-6 bg-[#2B2D31] p-5 rounded-md border border-[#590785]">
                 <div class="relative mb-4 group">
-                    <img id="avatar-preview" src="" alt="Avatar" class="w-20 h-20 rounded-full bg-[#1E1F22] object-cover border-4 border-[#313338]" />
+                    <img id="avatar-preview" src="" alt="Avatar" class="w-20 h-20 rounded-full bg-[#590785] object-cover border-4 border-[#313338]" />
                     <label for="avatar-upload" class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
                         <i data-lucide="camera" class="text-white w-6 h-6"></i>
                     </label>
@@ -92,7 +92,7 @@
 
                 <div class="w-full space-y-2">
                     <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider text-left">Avatar Style</label>
-                    <select id="avatar-style-select" onchange="updateAvatarUrl()" class="w-full bg-[#1E1F22] text-white text-sm py-2 px-3 rounded border-none focus:ring-1 focus:ring-[#5865F2] cursor-pointer">
+                    <select id="avatar-style-select" onchange="updateAvatarUrl()" class="w-full bg-[#590785] text-white text-sm py-2 px-3 rounded border-none focus:ring-1 focus:ring-[#5865F2] cursor-pointer">
                         <option value="avataaars">Humans</option>
                         <option value="bottts">Robots</option>
                         <option value="micah">Minimalist</option>
@@ -106,22 +106,22 @@
                 <div class="text-left mb-6">
                     <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2">Display Name</label>
                     <input type="text" id="user-name" required placeholder="What should we call you?" 
-                        class="w-full bg-[#1E1F22] text-white px-4 py-3 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] transition-all">
+                        class="w-full bg-[#590785] text-white px-4 py-3 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] transition-all">
                 </div>
 
                 <!-- PUBLIC LOBBIES -->
                 <div class="mb-4">
                     <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2 text-left">Public Lobbies</label>
                     <div class="grid grid-cols-3 gap-2">
-                        <button id="btn-lobby-1" onclick="joinPublicRoom(1)" class="w-full bg-[#23A559] hover:bg-[#1E8A49] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
+                        <button id="btn-lobby-1" onclick="joinPublicRoom(1)" class="w-full bg-[#0d0785] hover:bg-[#1007ba] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
                             <div class="flex items-center gap-1"><i data-lucide="globe" class="w-4 h-4"></i> Lobby 1</div>
                             <span id="lobby-count-1" class="text-[10px] text-white/70 mt-0.5 font-normal">Checking...</span>
                         </button>
-                        <button id="btn-lobby-2" onclick="joinPublicRoom(2)" class="w-full bg-[#23A559] hover:bg-[#1E8A49] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
+                        <button id="btn-lobby-2" onclick="joinPublicRoom(2)" class="w-full bg-[#0d0785] hover:bg-[#1007ba] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
                             <div class="flex items-center gap-1"><i data-lucide="globe" class="w-4 h-4"></i> Lobby 2</div>
                             <span id="lobby-count-2" class="text-[10px] text-white/70 mt-0.5 font-normal">Checking...</span>
                         </button>
-                        <button id="btn-lobby-3" onclick="joinPublicRoom(3)" class="w-full bg-[#23A559] hover:bg-[#1E8A49] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
+                        <button id="btn-lobby-3" onclick="joinPublicRoom(3)" class="w-full bg-[#0d0785] hover:bg-[#1007ba] text-white font-medium py-3 rounded transition-all text-sm shadow-lg flex flex-col items-center justify-center">
                             <div class="flex items-center gap-1"><i data-lucide="globe" class="w-4 h-4"></i> Lobby 3</div>
                             <span id="lobby-count-3" class="text-[10px] text-white/70 mt-0.5 font-normal">Checking...</span>
                         </button>
@@ -138,14 +138,14 @@
                 <div class="mb-4 text-left">
                     <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2">Custom Code (Optional)</label>
                     <input type="text" id="custom-room-code" placeholder="Leave blank for random" 
-                        class="w-full bg-[#1E1F22] text-white px-4 py-2.5 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] uppercase font-mono tracking-widest text-center">
+                        class="w-full bg-[#590785] text-white px-4 py-2.5 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] uppercase font-mono tracking-widest text-center">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4 mt-2">
                     <button onclick="createRoom()" id="create-btn" class="w-full discord-button-primary text-white font-medium py-2.5 rounded transition-all text-sm flex items-center justify-center gap-2">
                         Create Private
                     </button>
-                    <button onclick="showJoinInput()" id="show-join-btn" class="w-full bg-[#4E5058] hover:bg-[#6D6F78] text-white font-medium py-2.5 rounded transition-all text-sm">
+                    <button onclick="showJoinInput()" id="show-join-btn" class="w-full bg-[#0779ba] hover:bg-[#045c8f] text-white font-medium py-2.5 rounded transition-all text-sm">
                         Join Private
                     </button>
                 </div>
@@ -154,7 +154,7 @@
                     <div class="text-left">
                         <label class="block text-[10px] font-bold text-[#B5BAC1] uppercase tracking-wider mb-2">Invite Code</label>
                         <input type="text" id="room-code" placeholder="e.g. h8k2m1" 
-                            class="w-full bg-[#1E1F22] text-white px-4 py-2.5 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] uppercase font-mono tracking-widest text-center">
+                            class="w-full bg-[#590785] text-white px-4 py-2.5 rounded focus:outline-none focus:ring-1 focus:ring-[#5865F2] uppercase font-mono tracking-widest text-center">
                     </div>
                     <button onclick="joinPrivateRoom()" id="join-btn" class="w-full discord-button-primary text-white font-medium py-2.5 rounded transition-all flex items-center justify-center gap-2">
                         Connect
@@ -168,8 +168,8 @@
     <div id="chat-screen" class="hidden h-full w-full flex-row overflow-hidden relative fade-in">
         
         <!-- Sidebar: Channel List & Participants -->
-        <div class="w-60 flex-shrink-0 bg-[#2B2D31] flex flex-col hidden md:flex border-r border-[#1E1F22]">
-            <div class="h-12 px-4 flex items-center justify-between border-b border-[#1E1F22] shadow-sm cursor-pointer hover:bg-[#35373C]">
+        <div class="w-60 flex-shrink-0 bg-[#2B2D31] flex flex-col hidden md:flex border-r border-[#590785]">
+            <div class="h-12 px-4 flex items-center justify-between border-b border-[#590785] shadow-sm cursor-pointer hover:bg-[#35373C]">
                 <h2 class="font-bold text-white text-sm truncate">Secret Room Chat</h2>
                 <i data-lucide="chevron-down" class="w-4 h-4 text-[#B5BAC1]"></i>
             </div>
@@ -178,7 +178,7 @@
                 <!-- Room Info -->
                 <div>
                     <h3 id="access-control-label" class="text-[11px] font-bold text-[#949BA4] uppercase tracking-wider mb-2 px-2">Access Control</h3>
-                    <div class="bg-[#1E1F22] p-3 rounded-md">
+                    <div class="bg-[#590785] p-3 rounded-md">
                         <p class="text-[9px] text-[#949BA4] font-bold uppercase mb-1">Invite Code</p>
                         <div class="flex items-center justify-between">
                             <span id="sidebar-room-code" class="font-mono font-bold text-white tracking-widest text-sm">---</span>
@@ -224,7 +224,7 @@
                 <div class="flex items-center gap-4 text-[#B5BAC1]">
                     <!-- New VC Controls -->
                   
-                    <div id="vc-controls" class="hidden flex items-center gap-2 mr-2 bg-[#1E1F22] rounded-md p-1">
+                    <div id="vc-controls" class="hidden flex items-center gap-2 mr-2 bg-[#590785] rounded-md p-1">
                         <button id="vc-mute-btn" onclick="window.toggleMute()" class="p-1.5 hover:bg-[#3F4147] hover:text-white rounded transition-colors" title="Mute/Unmute">
                             <i data-lucide="mic" class="w-4 h-4" id="vc-mic-icon"></i>
                         </button>
@@ -250,13 +250,13 @@
             <div class="px-4 pb-6 pt-2 flex-shrink-0 relative">
                 
                 <!-- Emoji Picker Popup -->
-                <div id="emoji-picker" class="hidden absolute bottom-20 right-14 bg-[#2B2D31] border border-[#1E1F22] rounded-lg shadow-xl p-2 w-72 h-48 overflow-y-auto grid-cols-8 gap-1 z-50 slide-up">
+                <div id="emoji-picker" class="hidden absolute bottom-20 right-14 bg-[#2B2D31] border border-[#590785] rounded-lg shadow-xl p-2 w-72 h-48 overflow-y-auto grid-cols-8 gap-1 z-50 slide-up">
                     <!-- Populated by JS -->
                 </div>
 
                 <!-- GIF Picker Popup -->
-                <div id="gif-picker" class="hidden absolute bottom-20 right-4 bg-[#2B2D31] border border-[#1E1F22] rounded-lg shadow-xl p-3 w-80 h-72 flex-col z-50 slide-up">
-                    <input type="text" id="gif-search-input" placeholder="Search Tenor/Giphy..." class="w-full bg-[#1E1F22] text-white px-3 py-2 rounded text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-[#5865F2]">
+                <div id="gif-picker" class="hidden absolute bottom-20 right-4 bg-[#2B2D31] border border-[#590785] rounded-lg shadow-xl p-3 w-80 h-72 flex-col z-50 slide-up">
+                    <input type="text" id="gif-search-input" placeholder="Search Tenor/Giphy..." class="w-full bg-[#590785] text-white px-3 py-2 rounded text-sm mb-2 focus:outline-none focus:ring-1 focus:ring-[#5865F2]">
                     <div id="gif-results" class="flex-1 overflow-y-auto grid grid-cols-2 gap-2 no-scrollbar">
                         <div class="col-span-2 text-center text-sm text-[#949BA4] py-4">Search to find GIFs</div>
                     </div>
@@ -289,10 +289,10 @@
 
     <!-- ADMIN MODAL -->
     <div id="admin-modal" class="hidden absolute inset-0 z-[100] flex items-center justify-center bg-black/80 fade-in">
-        <div class="bg-[#313338] p-6 rounded-lg shadow-2xl w-80 text-center border border-[#1E1F22]">
+        <div class="bg-[#313338] p-6 rounded-lg shadow-2xl w-80 text-center border border-[#590785]">
             <h2 class="text-xl font-bold text-white mb-2">Admin Access</h2>
             <p class="text-xs text-[#949BA4] mb-4">Enter the secret password to unlock admin powers.</p>
-            <input type="password" id="admin-password" placeholder="Password" class="w-full bg-[#1E1F22] text-white px-4 py-2 rounded focus:outline-none focus:ring-1 focus:ring-[#FA777C] mb-4 text-center">
+            <input type="password" id="admin-password" placeholder="Password" class="w-full bg-[#590785] text-white px-4 py-2 rounded focus:outline-none focus:ring-1 focus:ring-[#FA777C] mb-4 text-center">
             <div id="admin-error" class="hidden text-[#FA777C] text-xs mb-4">Incorrect password</div>
             <div class="flex gap-3 justify-center">
                 <button onclick="window.closeAdminModal()" class="px-4 py-2 text-sm text-[#B5BAC1] hover:text-white transition-colors">Cancel</button>
@@ -301,7 +301,7 @@
         </div>
     </div>
   <div id="unban-modal" class="hidden absolute inset-0 z-[100] flex items-center justify-center bg-black/80 fade-in">
-        <div class="bg-[#313338] p-6 rounded-lg shadow-2xl w-96 max-h-[80vh] flex flex-col border border-[#1E1F22]">
+        <div class="bg-[#313338] p-6 rounded-lg shadow-2xl w-96 max-h-[80vh] flex flex-col border border-[#590785]">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-white">Banned Users</h2>
                 <button onclick="window.closeUnbanModal()" class="text-[#B5BAC1] hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -506,7 +506,7 @@
                 data.results.forEach(gif => {
                     const img = document.createElement('img');
                     img.src = gif.media[0].tinygif.url;
-                    img.className = 'w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-[#1E1F22]';
+                    img.className = 'w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity border border-[#590785]';
                     img.onclick = () => window.sendGif(gif.media[0].gif.url);
                     container.appendChild(img);
                 });
@@ -1155,7 +1155,7 @@
                 else if (data.type === 'kicked') {
                     isKicked = true;
                     if (peer) peer.destroy();
-                    document.body.innerHTML = `<div class="h-screen w-screen flex flex-col items-center justify-center bg-[#1E1F22] text-center p-6"><h1 class="text-[#FA777C] text-3xl font-bold mb-4">Disconnected</h1><p class="text-[#949BA4] text-sm">You have been kicked from the room by an admin.</p></div>`;
+                    document.body.innerHTML = `<div class="h-screen w-screen flex flex-col items-center justify-center bg-[#590785] text-center p-6"><h1 class="text-[#FA777C] text-3xl font-bold mb-4">Disconnected</h1><p class="text-[#949BA4] text-sm">You have been kicked from the room by an admin.</p></div>`;
                 }
             });
             conn.on('close', handleHostDisconnect);
@@ -1359,7 +1359,7 @@
 
         function getMessageContentHtml(msg) {
             if (msg.isGif) {
-                return `<img src="${msg.gifUrl}" loading="lazy" class="max-w-[250px] rounded-md border border-[#1E1F22] mt-1 shadow-sm">`;
+                return `<img src="${msg.gifUrl}" loading="lazy" class="max-w-[250px] rounded-md border border-[#590785] mt-1 shadow-sm">`;
             }
             if (msg.isAudio) {
                 return `<audio controls src="${msg.audioData}" class="mt-2 h-10 w-[250px] outline-none rounded-full"></audio>`;
@@ -1367,11 +1367,11 @@
             if (msg.isFile) {
                 if (msg.fileType && msg.fileType.startsWith('image/')) {
                     return `<a href="${msg.fileData}" download="${escapeHtml(msg.fileName)}" class="block mt-1 w-fit" title="Click to download">
-                        <img src="${msg.fileData}" alt="${escapeHtml(msg.fileName)}" loading="lazy" class="max-w-[250px] max-h-[250px] rounded-md border border-[#1E1F22] hover:opacity-90 transition-opacity">
+                        <img src="${msg.fileData}" alt="${escapeHtml(msg.fileName)}" loading="lazy" class="max-w-[250px] max-h-[250px] rounded-md border border-[#590785] hover:opacity-90 transition-opacity">
                     </a>`;
                 } else {
-                    return `<a href="${msg.fileData}" download="${escapeHtml(msg.fileName)}" class="flex items-center gap-3 bg-[#2B2D31] hover:bg-[#35373C] border border-[#1E1F22] p-2.5 rounded-md mt-1 w-fit transition-colors text-sm text-[#DBDEE1] group/file shadow-sm">
-                        <div class="bg-[#1E1F22] p-2 rounded text-[#B5BAC1] group-hover/file:text-white transition-colors">
+                    return `<a href="${msg.fileData}" download="${escapeHtml(msg.fileName)}" class="flex items-center gap-3 bg-[#2B2D31] hover:bg-[#35373C] border border-[#590785] p-2.5 rounded-md mt-1 w-fit transition-colors text-sm text-[#DBDEE1] group/file shadow-sm">
+                        <div class="bg-[#590785] p-2 rounded text-[#B5BAC1] group-hover/file:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                         </div>
                         <span class="truncate max-w-[200px] font-medium mr-2">${escapeHtml(msg.fileName)}</span>
@@ -1449,7 +1449,7 @@
                                          <div class="ml-12">${getMessageContentHtml(msg)}</div>`;
                     } else {
                         div.className = wrapperClass;
-                        div.innerHTML = `<img src="${msg.avatar}" class="w-10 h-10 rounded-full flex-shrink-0 bg-[#1E1F22] object-cover" loading="lazy">
+                        div.innerHTML = `<img src="${msg.avatar}" class="w-10 h-10 rounded-full flex-shrink-0 bg-[#590785] object-cover" loading="lazy">
                                          <div class="flex-1 min-w-0">
                                              <div class="flex items-center gap-2 mb-1">
                                                  <span class="font-semibold text-white hover:underline cursor-pointer">${escapeHtml(msg.senderName)}</span>
@@ -1488,7 +1488,7 @@
                 div.className = "flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#3F4147] group cursor-pointer transition-colors";
                 div.innerHTML = `
                     <div class="relative flex-shrink-0">
-                        <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-[#1E1F22] object-cover" loading="lazy">
+                        <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-[#590785] object-cover" loading="lazy">
                         <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#23A559] border-2 border-[#2B2D31] rounded-full"></div>
                     </div>
                     <span class="text-sm font-medium ${p.isHost ? 'text-[#FEE75C]' : 'text-[#949BA4]'} group-hover:text-white truncate ${isAdmin ? 'w-[100px]' : 'flex-1'}">${escapeHtml(p.name)}</span>
@@ -1892,7 +1892,7 @@
 
             bannedUsers.forEach(userId => {
                 const el = document.createElement('div');
-                el.className = "flex justify-between items-center bg-[#2B2D31] p-2 rounded border border-[#1E1F22]";
+                el.className = "flex justify-between items-center bg-[#2B2D31] p-2 rounded border border-[#590785]";
                 el.innerHTML = `
                     <span class="text-white text-sm font-medium truncate w-48">ID: ${userId.substring(0, 8)}...</span>
                     <button onclick="window.unbanUser('${userId}')" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-3 py-1 rounded text-xs transition font-bold">Unban</button>
